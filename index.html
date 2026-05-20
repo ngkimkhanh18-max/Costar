@@ -1,0 +1,1737 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CO-STAR · Prompt Builder</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,400;0,500;0,700;0,900;1,400;1,500&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* ━━━━━━━━━━━━━━ TOKENS ━━━━━━━━━━━━━━ */
+:root {
+  --red:        #2563EB;
+  --red-deep:   #1D4ED8;
+  --red-soft:   #2563EB80;
+  --red-glow:   rgba(37,99,235,0.15);
+  --red-ghost:  rgba(37,99,235,0.06);
+  --cream:      #F8FAFC;
+  --warm-50:    #F1F5F9;
+  --warm-100:   #E2E8F0;
+  --warm-200:   #CBD5E1;
+  --ink:        #12100E;
+  --ink-70:     #4A4440;
+  --ink-40:     #8A8380;
+  --ink-20:     #C2BFBC;
+  --lc: #1655A0; --lo: #2563EB; --ls: #6A1F8A;
+  --lt: #7C3AED; --la: #D15000; --lr: #1A7A34;
+  --r: 14px; --r-sm: 8px; --r-lg: 20px;
+  --shadow-card: 0 2px 0 rgba(0,0,0,0.06), 0 8px 32px rgba(0,0,0,0.07);
+  --shadow-float: 0 4px 0 rgba(0,0,0,0.08), 0 16px 48px rgba(0,0,0,0.12);
+  --shadow-red: 0 4px 24px rgba(37,99,235,0.22);
+  --transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ━━━━━━━━━━━━━━ RESET + BASE ━━━━━━━━━━━━━━ */
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior:smooth; font-size:14px; }
+body {
+  font-family: 'Roboto', sans-serif;
+  background: var(--cream);
+  color: var(--ink);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* subtle grain texture */
+body::before {
+  content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.025'/%3E%3C/svg%3E");
+  opacity:0.4;
+}
+
+/* ━━━━━━━━━━━━━━ PAGE LOAD ANIMATIONS ━━━━━━━━━━━━━━ */
+@keyframes fadeUp {
+  from { opacity:0; transform:translateY(18px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+@keyframes slideIn {
+  from { opacity:0; transform:translateX(-12px); }
+  to   { opacity:1; transform:translateX(0); }
+}
+@keyframes pulseRed {
+  0%,100% { box-shadow: 0 0 0 0 rgba(192,0,0,0.3); }
+  50%     { box-shadow: 0 0 0 6px rgba(192,0,0,0); }
+}
+@keyframes shimmer {
+  from { background-position: -200% center; }
+  to   { background-position: 200% center; }
+}
+@keyframes spinSlow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes blink {
+  0%,100%{opacity:1} 50%{opacity:0}
+}
+
+/* ━━━━━━━━━━━━━━ HEADER ━━━━━━━━━━━━━━ */
+.header {
+  position: sticky; top: 0; z-index: 200;
+  background: rgba(253,250,247,0.92);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1.5px solid var(--warm-200);
+  padding: 0 28px;
+  height: 58px;
+  display: flex; align-items: center; justify-content: space-between;
+  animation: fadeUp 0.5s ease both;
+}
+/* red accent stripe */
+.header::after {
+  content:''; position:absolute; bottom:-1.5px; left:0;
+  width:100%; height:2px;
+  background: linear-gradient(90deg, var(--red) 0%, var(--red-deep) 40%, transparent 100%);
+}
+
+.logo { display:flex; align-items:center; gap:12px; text-decoration:none; }
+.logo-badge {
+  width:38px; height:38px; border-radius:10px;
+  background: linear-gradient(135deg, var(--red) 0%, var(--red-deep) 100%);
+  display:flex; align-items:center; justify-content:center;
+  box-shadow: var(--shadow-red);
+  position:relative; overflow:hidden;
+  flex-shrink:0;
+}
+.logo-badge::before {
+  content:''; position:absolute; inset:0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 60%);
+}
+.logo-badge-text {
+  font-family:'Roboto',sans-serif; font-weight:800; font-size:11px; color:white;
+  letter-spacing:0.5px; z-index:1; line-height:1;
+}
+.logo-badge-text em { font-style:italic; font-size:10px; }
+.logo-info {}
+.logo-name {
+  font-family:'Roboto',sans-serif; font-weight:800; font-size:15px; color:var(--ink);
+  line-height:1.1;
+}
+.logo-name em { color:var(--red); font-style:normal; }
+.logo-tagline { font-size:10px; color:var(--ink-40); font-weight:500; margin-top:1px; }
+
+/* pill nav */
+.nav-wrap {
+  display:flex; align-items:center;
+  background: var(--warm-100);
+  border: 1.5px solid var(--warm-200);
+  border-radius:40px;
+  padding: 3px;
+  gap:2px;
+}
+.nav-btn {
+  padding:6px 18px;
+  border-radius:40px;
+  font-size:12px; font-weight:600;
+  cursor:pointer; border:none;
+  background:transparent; color:var(--ink-70);
+  font-family:'Roboto',sans-serif;
+  transition: var(--transition);
+  white-space:nowrap;
+}
+.nav-btn:hover { color:var(--ink); background:rgba(0,0,0,0.04); }
+.nav-btn.active {
+  background: var(--red);
+  color: white;
+  box-shadow: 0 2px 10px rgba(192,0,0,0.28);
+}
+
+/* ━━━━━━━━━━━━━━ HERO BANNER ━━━━━━━━━━━━━━ */
+.hero {
+  background: linear-gradient(135deg, var(--red-deep) 0%, var(--red) 50%, #E81111 100%);
+  padding: 28px 28px 24px;
+  position:relative; overflow:hidden;
+  animation: fadeUp 0.6s 0.1s ease both;
+}
+.hero::before {
+  content:''; position:absolute; inset:0;
+  background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+/* big decorative circles */
+.hero::after {
+  content:''; position:absolute; top:-60px; right:-60px;
+  width:240px; height:240px; border-radius:50%;
+  border:1px solid rgba(255,255,255,0.12);
+  pointer-events:none;
+}
+.hero-inner { position:relative; z-index:1; max-width:1100px; margin:0 auto; display:flex; align-items:center; justify-content:space-between; gap:24px; flex-wrap:wrap; }
+.hero-left {}
+.hero-eyebrow {
+  font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:500;
+  color:rgba(255,255,255,0.6); letter-spacing:2px; text-transform:uppercase;
+  margin-bottom:8px;
+}
+.hero-title {
+  font-family:'Roboto',sans-serif; font-weight:800;
+  font-size:26px; color:white; line-height:1.15;
+  margin-bottom:8px;
+}
+.hero-title em { font-style:normal; color:rgba(255,255,255,0.65); font-size:22px; }
+.hero-sub {
+  font-size:13px; color:rgba(255,255,255,0.72); line-height:1.55;
+  max-width:500px;
+}
+.hero-steps {
+  display:flex; gap:6px; margin-top:16px; flex-wrap:wrap;
+}
+.hero-step {
+  display:flex; align-items:center; gap:6px;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius:20px; padding:5px 12px;
+  font-size:11px; color:white; font-weight:600;
+}
+.hero-step-num {
+  width:18px; height:18px; border-radius:50%;
+  background:rgba(255,255,255,0.25);
+  display:flex; align-items:center; justify-content:center;
+  font-size:9px; font-weight:800;
+}
+/* co-star letters on hero right */
+.hero-costar {
+  display:flex; gap:4px;
+  flex-shrink:0;
+}
+.cs-letter {
+  width:38px; height:48px;
+  border-radius:10px;
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Roboto',sans-serif; font-weight:800; font-size:20px;
+  background:rgba(255,255,255,0.14);
+  border:1px solid rgba(255,255,255,0.22);
+  color:white;
+  backdrop-filter:blur(4px);
+  animation: fadeUp 0.4s both;
+}
+.cs-letter:nth-child(1){animation-delay:0.2s}
+.cs-letter:nth-child(2){animation-delay:0.25s}
+.cs-letter:nth-child(3){animation-delay:0.3s}
+.cs-letter:nth-child(4){animation-delay:0.35s}
+.cs-letter:nth-child(5){animation-delay:0.4s}
+.cs-letter:nth-child(6){animation-delay:0.45s}
+
+/* ━━━━━━━━━━━━━━ MAIN LAYOUT ━━━━━━━━━━━━━━ */
+.main { max-width:1100px; margin:0 auto; padding:24px 20px 80px; position:relative; z-index:1; }
+.panel { display:none; }
+.panel.active { display:block; }
+
+/* ━━━━━━━━━━━━━━ BUILDER GRID ━━━━━━━━━━━━━━ */
+.builder-layout {
+  display:grid;
+  grid-template-columns:1fr 390px;
+  gap:20px;
+  align-items:start;
+}
+
+/* ━━━━━━━━━━━━━━ SECTION LABEL ━━━━━━━━━━━━━━ */
+.section-eyebrow {
+  display:flex; align-items:center; gap:8px;
+  margin-bottom:14px;
+  animation: slideIn 0.4s 0.15s both;
+}
+.eyebrow-num {
+  width:26px; height:26px; border-radius:50%;
+  background: var(--red);
+  color:white; font-family:'Roboto',sans-serif; font-weight:800; font-size:11px;
+  display:flex; align-items:center; justify-content:center;
+  box-shadow: 0 2px 8px rgba(192,0,0,0.3);
+  flex-shrink:0;
+}
+.eyebrow-text { font-family:'Roboto',sans-serif; font-weight:700; font-size:12px; color:var(--ink); letter-spacing:0.5px; }
+.eyebrow-hint { font-size:11px; color:var(--ink-40); font-weight:400; margin-left:4px; }
+.eyebrow-line { flex:1; height:1px; background:linear-gradient(90deg, var(--warm-200) 0%, transparent 100%); }
+
+/* ━━━━━━━━━━━━━━ FLOW GROUP ━━━━━━━━━━━━━━ */
+.flow-group {
+  background:white;
+  border:1.5px solid var(--warm-200);
+  border-radius:var(--r-lg);
+  overflow:hidden;
+  margin-bottom:12px;
+  box-shadow: var(--shadow-card);
+  animation: fadeUp 0.4s 0.2s both;
+}
+.flow-group-header {
+  background: linear-gradient(90deg, var(--red-deep) 0%, var(--red) 100%);
+  padding:10px 16px;
+  display:flex; align-items:center; gap:8px;
+}
+.flow-header-icon {
+  width:26px; height:26px; border-radius:6px;
+  background:rgba(255,255,255,0.18);
+  display:flex; align-items:center; justify-content:center; font-size:13px;
+}
+.flow-header-title {
+  font-family:'Roboto',sans-serif; font-size:10px; font-weight:800;
+  color:white; text-transform:uppercase; letter-spacing:1.5px;
+}
+.flow-header-sub { font-size:10px; color:rgba(255,255,255,0.55); margin-left:auto; font-weight:500; }
+.flow-chips { padding:8px; display:flex; flex-direction:column; gap:4px; }
+
+/* ━━━━━━━━━━━━━━ PURPOSE CHIP ━━━━━━━━━━━━━━ */
+.purpose-chip {
+  padding:10px 14px;
+  border-radius:var(--r-sm);
+  border:1.5px solid var(--warm-100);
+  background:var(--warm-50);
+  cursor:pointer;
+  display:flex; align-items:center; gap:12px;
+  transition: var(--transition);
+  position:relative; overflow:hidden;
+}
+.purpose-chip::before {
+  content:''; position:absolute; left:0; top:0; bottom:0;
+  width:3px; background:var(--warm-200);
+  transition: background 0.2s;
+}
+.purpose-chip:hover {
+  border-color:rgba(192,0,0,0.25);
+  background:var(--red-ghost);
+  transform:translateX(2px);
+}
+.purpose-chip:hover::before { background:var(--red); }
+.purpose-chip.selected {
+  border-color:rgba(192,0,0,0.3);
+  background: linear-gradient(90deg, rgba(192,0,0,0.06) 0%, rgba(192,0,0,0.02) 100%);
+  box-shadow: 0 0 0 3px rgba(192,0,0,0.08), var(--shadow-card);
+}
+.purpose-chip.selected::before { background:var(--red); }
+
+.chip-step-badge {
+  width:22px; height:22px; border-radius:50%;
+  background:var(--warm-200); color:var(--ink-70);
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Roboto',sans-serif; font-size:9px; font-weight:800;
+  flex-shrink:0; transition:var(--transition);
+}
+.purpose-chip.selected .chip-step-badge,
+.purpose-chip:hover .chip-step-badge {
+  background:var(--red); color:white;
+}
+.chip-icon-wrap {
+  width:34px; height:34px; border-radius:8px;
+  background:white; border:1px solid var(--warm-200);
+  display:flex; align-items:center; justify-content:center;
+  font-size:16px; flex-shrink:0;
+  box-shadow:0 1px 4px rgba(0,0,0,0.06);
+  transition:var(--transition);
+}
+.purpose-chip:hover .chip-icon-wrap,
+.purpose-chip.selected .chip-icon-wrap {
+  border-color:rgba(192,0,0,0.25);
+  box-shadow:0 2px 8px rgba(192,0,0,0.12);
+}
+.chip-body { flex:1; min-width:0; }
+.chip-label { font-size:12.5px; font-weight:700; color:var(--ink); margin-bottom:2px; }
+.chip-sub { font-size:10.5px; color:var(--ink-40); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.purpose-chip.selected .chip-label { color:var(--red-deep); }
+.chip-arrow {
+  color:var(--ink-20); font-size:14px; flex-shrink:0;
+  transition:var(--transition);
+}
+.purpose-chip:hover .chip-arrow,
+.purpose-chip.selected .chip-arrow { color:var(--red); transform:translateX(2px); }
+
+/* OTHER chips */
+.other-group {
+  background:white;
+  border:1.5px solid var(--warm-200);
+  border-radius:var(--r-lg);
+  overflow:hidden;
+  box-shadow:var(--shadow-card);
+  animation: fadeUp 0.4s 0.25s both;
+}
+.other-group-header {
+  padding:9px 14px;
+  background:var(--warm-100);
+  border-bottom:1px solid var(--warm-200);
+  font-family:'Roboto',sans-serif; font-size:10px; font-weight:700;
+  color:var(--ink-70); text-transform:uppercase; letter-spacing:1.5px;
+}
+.other-chips-grid {
+  display:grid; grid-template-columns:1fr 1fr 1fr;
+  gap:8px; padding:10px;
+}
+.other-chip {
+  padding:10px 10px;
+  border-radius:var(--r-sm);
+  border:1.5px solid var(--warm-100);
+  background:var(--warm-50);
+  cursor:pointer;
+  display:flex; flex-direction:column; align-items:center;
+  gap:6px; text-align:center;
+  transition:var(--transition);
+}
+.other-chip:hover { border-color:rgba(192,0,0,0.25); background:var(--red-ghost); }
+.other-chip.selected { border-color:rgba(192,0,0,0.3); background:rgba(192,0,0,0.05); box-shadow:0 0 0 3px rgba(192,0,0,0.08); }
+.other-chip-icon { font-size:22px; }
+.other-chip-label { font-size:11px; font-weight:700; color:var(--ink); }
+.other-chip-sub { font-size:9.5px; color:var(--ink-40); line-height:1.4; }
+
+/* ━━━━━━━━━━━━━━ CO-STAR FORM ━━━━━━━━━━━━━━ */
+.costar-form { display:flex; flex-direction:column; gap:8px; }
+.costar-field {
+  background:white;
+  border:1.5px solid var(--warm-200);
+  border-radius:var(--r);
+  overflow:hidden;
+  box-shadow:var(--shadow-card);
+  transition: border-color 0.2s, box-shadow 0.2s;
+  animation: slideIn 0.3s both;
+}
+.costar-field:nth-child(1){animation-delay:0.1s}
+.costar-field:nth-child(2){animation-delay:0.14s}
+.costar-field:nth-child(3){animation-delay:0.18s}
+.costar-field:nth-child(4){animation-delay:0.22s}
+.costar-field:nth-child(5){animation-delay:0.26s}
+.costar-field:nth-child(6){animation-delay:0.30s}
+.costar-field:focus-within {
+  border-color:rgba(192,0,0,0.3);
+  box-shadow:0 0 0 4px rgba(192,0,0,0.07), var(--shadow-card);
+}
+
+.field-header {
+  display:flex; align-items:center; gap:10px;
+  padding:10px 14px 8px;
+  background:white;
+  cursor:default;
+}
+.field-badge {
+  width:32px; height:32px; border-radius:8px;
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Roboto',sans-serif; font-size:15px; font-weight:800;
+  flex-shrink:0;
+}
+.badge-c {background:rgba(22,85,160,0.10);color:var(--lc)}
+.badge-o {background:rgba(192,0,0,0.10);color:var(--lo)}
+.badge-s {background:rgba(106,31,138,0.10);color:var(--ls)}
+.badge-t {background:rgba(181,40,40,0.10);color:var(--lt)}
+.badge-a {background:rgba(209,80,0,0.10);color:var(--la)}
+.badge-r {background:rgba(26,122,52,0.10);color:var(--lr)}
+
+.field-meta { flex:1; }
+.field-name { font-size:12px; font-weight:700; line-height:1; margin-bottom:2px; }
+.field-hint { font-size:10.5px; color:var(--ink-40); }
+
+.field-tags {
+  display:flex; gap:4px; flex-wrap:wrap;
+  padding:0 14px 7px;
+}
+.tag-pill {
+  padding:3px 10px; border-radius:20px;
+  font-size:10px; font-weight:600;
+  background:var(--warm-100); border:1px solid var(--warm-200);
+  color:var(--ink-70); cursor:pointer;
+  transition:var(--transition);
+  font-family:'Roboto',sans-serif;
+}
+.tag-pill:hover { background:var(--red-ghost); border-color:rgba(192,0,0,0.25); color:var(--red-deep); }
+.tag-pill:active { transform:scale(0.95); }
+
+.field-input {
+  width:100%; background:var(--warm-50);
+  border:none; border-top:1px solid var(--warm-100);
+  padding:10px 14px; color:var(--ink);
+  font-size:12.5px; line-height:1.6;
+  font-family:'Roboto',sans-serif;
+  resize:vertical; min-height:52px; outline:none;
+  transition:background 0.2s;
+}
+.field-input:focus { background:white; }
+.field-input::placeholder { color:var(--ink-20); font-style:italic; }
+
+/* ━━━━━━━━━━━━━━ ACTION BAR ━━━━━━━━━━━━━━ */
+.action-bar {
+  display:flex; gap:10px; margin-top:14px;
+  animation: fadeUp 0.4s 0.35s both;
+}
+.btn-primary {
+  flex:1; padding:14px 24px;
+  background:linear-gradient(135deg, var(--red) 0%, var(--red-deep) 100%);
+  color:white; border:none; border-radius:var(--r);
+  font-family:'Roboto',sans-serif; font-size:14px; font-weight:800;
+  cursor:pointer; letter-spacing:0.3px;
+  box-shadow:var(--shadow-red);
+  transition:var(--transition);
+  position:relative; overflow:hidden;
+}
+.btn-primary::before {
+  content:''; position:absolute; inset:0;
+  background:linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 60%);
+}
+.btn-primary:hover { transform:translateY(-2px); box-shadow:0 6px 28px rgba(192,0,0,0.35); }
+.btn-primary:active { transform:translateY(0); }
+
+.btn-ghost {
+  padding:14px 18px; border-radius:var(--r);
+  background:white; color:var(--ink-70);
+  border:1.5px solid var(--warm-200);
+  font-size:13px; font-weight:600; cursor:pointer;
+  font-family:'Roboto',sans-serif;
+  transition:var(--transition);
+}
+.btn-ghost:hover { border-color:var(--warm-200); color:var(--ink); background:var(--warm-50); }
+
+/* ━━━━━━━━━━━━━━ OUTPUT PANEL ━━━━━━━━━━━━━━ */
+.output-panel { position:sticky; top:78px; }
+
+.output-card {
+  background:white;
+  border:1.5px solid var(--warm-200);
+  border-radius:var(--r-lg);
+  overflow:hidden;
+  box-shadow:var(--shadow-float);
+  animation: fadeUp 0.5s 0.2s both;
+}
+
+.output-header {
+  background:linear-gradient(135deg, var(--red-deep) 0%, var(--red) 100%);
+  padding:12px 16px;
+  display:flex; align-items:center; justify-content:space-between;
+  position:relative; overflow:hidden;
+}
+.output-header::before {
+  content:''; position:absolute; top:-20px; right:-20px;
+  width:80px; height:80px; border-radius:50%;
+  border:1px solid rgba(255,255,255,0.12);
+}
+.output-header-left { display:flex; align-items:center; gap:8px; }
+.output-dot {
+  width:8px; height:8px; border-radius:50%; background:rgba(255,255,255,0.5);
+  animation: blink 2s infinite;
+}
+.output-label {
+  font-family:'JetBrains Mono',monospace; font-size:10px;
+  color:rgba(255,255,255,0.8); text-transform:uppercase; letter-spacing:1.5px;
+}
+.output-actions { display:flex; gap:6px; }
+.btn-output {
+  padding:5px 14px; border-radius:6px;
+  font-size:11px; font-weight:700; cursor:pointer;
+  font-family:'Roboto',sans-serif;
+  transition:var(--transition);
+}
+.btn-output-white { background:white; color:var(--red); border:none; }
+.btn-output-white:hover { background:rgba(255,255,255,0.88); transform:scale(0.97); }
+.btn-output-ghost { background:rgba(255,255,255,0.14); color:white; border:1px solid rgba(255,255,255,0.25); }
+.btn-output-ghost:hover { background:rgba(255,255,255,0.24); }
+
+.output-body {
+  padding:18px;
+  font-family:'JetBrains Mono',monospace;
+  font-size:11.5px; line-height:1.9;
+  min-height:200px; white-space:pre-wrap; word-break:break-word;
+  color:var(--ink);
+  background:white;
+}
+.output-empty {
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  min-height:200px; gap:10px;
+  color:var(--ink-20);
+  font-family:'Roboto',sans-serif; font-style:italic; font-size:12px;
+}
+.output-empty-icon {
+  width:52px; height:52px; border-radius:50%;
+  background:var(--warm-100); border:2px dashed var(--warm-200);
+  display:flex; align-items:center; justify-content:center; font-size:22px;
+}
+.tag-c{color:var(--lc);font-weight:700}
+.tag-o{color:var(--lo);font-weight:700}
+.tag-s{color:var(--ls);font-weight:700}
+.tag-t{color:var(--lt);font-weight:700}
+.tag-a{color:var(--la);font-weight:700}
+.tag-r{color:var(--lr);font-weight:700}
+.tag-val{color:var(--ink)}
+
+.tool-bar {
+  padding:10px 16px;
+  border-top:1px solid var(--warm-100);
+  display:flex; align-items:center; gap:8px;
+  background:var(--warm-50);
+  font-size:11px; color:var(--ink-40);
+  display:none;
+}
+.tool-badge {
+  padding:3px 10px; border-radius:20px;
+  font-size:10.5px; font-weight:700;
+  background:rgba(192,0,0,0.08);
+  color:var(--red-deep); border:1px solid rgba(192,0,0,0.18);
+}
+
+/* ━━━━━━━━━━━━━━ HISTORY STRIP ━━━━━━━━━━━━━━ */
+.history-strip { margin-top:14px; animation: fadeUp 0.4s 0.35s both; }
+.history-strip-label {
+  font-family:'Roboto',sans-serif; font-size:10px; font-weight:700;
+  text-transform:uppercase; letter-spacing:1.5px; color:var(--ink-40);
+  margin-bottom:8px; display:flex; align-items:center; gap:6px;
+}
+.history-list { display:flex; flex-direction:column; gap:5px; }
+.history-item {
+  background:white; border:1.5px solid var(--warm-200);
+  border-radius:var(--r-sm); padding:9px 12px;
+  cursor:pointer; display:flex; align-items:center; gap:10px;
+  transition:var(--transition); box-shadow:var(--shadow-card);
+}
+.history-item:hover { border-color:rgba(192,0,0,0.2); transform:translateX(2px); }
+.history-item-dot { width:6px; height:6px; border-radius:50%; background:var(--red); flex-shrink:0; opacity:0.5; }
+.history-item-text { font-size:11px; color:var(--ink-70); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; }
+.history-item-meta { display:flex; align-items:center; gap:6px; flex-shrink:0; }
+.history-time { font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--ink-20); }
+.history-load {
+  font-size:10px; color:var(--red); font-weight:700;
+  padding:2px 8px; border-radius:4px;
+  background:var(--red-ghost); border:1px solid rgba(192,0,0,0.15);
+}
+
+/* ━━━━━━━━━━━━━━ MATERIALS TAB ━━━━━━━━━━━━━━ */
+.materials-grid {
+  display:grid; grid-template-columns:1fr 1fr 1fr;
+  gap:18px;
+}
+.mat-card {
+  background:white; border:1.5px solid var(--warm-200);
+  border-radius:var(--r-lg); overflow:hidden;
+  box-shadow:var(--shadow-card);
+  animation:fadeUp 0.4s both;
+  display:flex; flex-direction:column;
+}
+.mat-card:nth-child(1){animation-delay:0.1s}
+.mat-card:nth-child(2){animation-delay:0.15s}
+.mat-card:nth-child(3){animation-delay:0.2s}
+
+.mat-card-top {
+  padding:16px 16px 12px;
+  border-bottom:1px solid var(--warm-100);
+  display:flex; align-items:flex-start; gap:12px;
+}
+.mat-card-icon {
+  width:42px; height:42px; border-radius:10px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:20px; flex-shrink:0;
+  box-shadow:0 2px 8px rgba(0,0,0,0.07);
+}
+.mat-card-title { font-family:'Roboto',sans-serif; font-size:14px; font-weight:800; color:var(--ink); margin-bottom:3px; }
+.mat-card-sub { font-size:11px; color:var(--ink-40); }
+.mat-card-body { padding:14px 16px; flex:1; display:flex; flex-direction:column; }
+
+.mat-label {
+  font-family:'Roboto',sans-serif; font-size:10px; font-weight:700;
+  text-transform:uppercase; letter-spacing:1px;
+  color:var(--ink-40); margin-bottom:6px; margin-top:12px; display:block;
+}
+.mat-label:first-child { margin-top:0; }
+
+.mat-chips-grid {
+  display:grid; grid-template-columns:1fr 1fr;
+  gap:5px; margin-bottom:2px;
+}
+.mat-chip {
+  padding:7px 9px; border-radius:var(--r-sm);
+  border:1.5px solid var(--warm-100); background:var(--warm-50);
+  color:var(--ink-70); font-size:11px; font-weight:600;
+  cursor:pointer; text-align:center;
+  transition:var(--transition);
+  font-family:'Roboto',sans-serif;
+}
+.mat-chip:hover { border-color:rgba(192,0,0,0.25); color:var(--red-deep); background:var(--red-ghost); }
+.mat-chip.selected { border-color:rgba(192,0,0,0.3); background:rgba(192,0,0,0.06); color:var(--red-deep); box-shadow:0 0 0 2px rgba(192,0,0,0.08); }
+
+.mat-input {
+  width:100%; background:var(--warm-50);
+  border:1.5px solid var(--warm-200); border-radius:var(--r-sm);
+  padding:9px 12px; color:var(--ink); font-size:12px; line-height:1.5;
+  font-family:'Roboto',sans-serif;
+  outline:none; resize:vertical; min-height:60px;
+  transition:var(--transition);
+}
+.mat-input:focus { border-color:rgba(192,0,0,0.3); background:white; box-shadow:0 0 0 3px rgba(192,0,0,0.06); }
+.mat-input::placeholder { color:var(--ink-20); font-style:italic; }
+.mat-input.small { min-height:unset; height:38px; resize:none; }
+
+.btn-mat {
+  width:100%; margin-top:14px;
+  padding:11px; border-radius:var(--r-sm);
+  background:linear-gradient(135deg, var(--red) 0%, var(--red-deep) 100%);
+  color:white; border:none;
+  font-family:'Roboto',sans-serif; font-size:12px; font-weight:800;
+  cursor:pointer; transition:var(--transition);
+  box-shadow:0 2px 12px rgba(192,0,0,0.2);
+}
+.btn-mat:hover { transform:translateY(-1px); box-shadow:var(--shadow-red); }
+
+.mat-output {
+  margin-top:10px; border-radius:var(--r-sm); overflow:hidden;
+  border:1.5px solid var(--warm-200); display:none;
+}
+.mat-output.visible { display:block; animation:fadeUp 0.25s both; }
+.mat-output-header {
+  background:linear-gradient(135deg, var(--red-deep) 0%, var(--red) 100%);
+  padding:8px 12px; display:flex; justify-content:space-between; align-items:center;
+}
+.mat-output-label {
+  font-family:'JetBrains Mono',monospace; font-size:9.5px;
+  color:rgba(255,255,255,0.8); text-transform:uppercase; letter-spacing:1px;
+}
+.mat-output-body {
+  padding:12px; font-family:'JetBrains Mono',monospace;
+  font-size:10.5px; color:var(--ink); line-height:1.75;
+  white-space:pre-wrap; word-break:break-word;
+  background:var(--warm-50);
+  max-height:200px; overflow-y:auto;
+}
+.mat-output-body::-webkit-scrollbar { width:4px; }
+.mat-output-body::-webkit-scrollbar-thumb { background:var(--warm-200); border-radius:2px; }
+
+/* tips card */
+.tip-row {
+  display:flex; flex-direction:column; gap:8px;
+}
+.tip-item {
+  background:var(--warm-50); border-radius:var(--r-sm);
+  padding:10px 12px 10px 14px;
+  border-left:3px solid;
+  font-size:11px; color:var(--ink-70); line-height:1.6;
+}
+.tip-title { font-size:11px; font-weight:700; margin-bottom:3px; }
+
+/* ━━━━━━━━━━━━━━ HISTORY PAGE ━━━━━━━━━━━━━━ */
+.hist-page-item {
+  background:white; border:1.5px solid var(--warm-200);
+  border-radius:var(--r-lg); padding:20px; margin-bottom:14px;
+  box-shadow:var(--shadow-card);
+  animation:fadeUp 0.3s both;
+}
+.hist-page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px; }
+.hist-purpose-tag {
+  font-family:'Roboto',sans-serif; font-size:12px; font-weight:800;
+  color:white; background:var(--red); padding:4px 12px;
+  border-radius:20px; letter-spacing:0.3px;
+}
+.hist-page-body {
+  font-family:'JetBrains Mono',monospace; font-size:10.5px;
+  color:var(--ink); line-height:1.75;
+  background:var(--warm-50); border-radius:var(--r-sm);
+  padding:14px; white-space:pre-wrap; word-break:break-word;
+  border:1px solid var(--warm-100);
+}
+
+/* ━━━━━━━━━━━━━━ TOAST ━━━━━━━━━━━━━━ */
+.toast {
+  position:fixed; bottom:28px; right:28px; z-index:9999;
+  background:var(--ink); color:white;
+  padding:11px 20px; border-radius:var(--r);
+  font-size:13px; font-weight:600;
+  font-family:'Roboto',sans-serif;
+  transform:translateY(60px) scale(0.95); opacity:0;
+  transition:all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow:0 8px 32px rgba(0,0,0,0.22);
+  display:flex; align-items:center; gap:8px;
+}
+.toast.show { transform:translateY(0) scale(1); opacity:1; }
+.toast-icon {
+  width:20px; height:20px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-size:11px; font-weight:900;
+}
+.toast.success .toast-icon { background:var(--red); }
+.toast.error .toast-icon { background:#E65100; }
+
+/* ━━━━━━━━━━━━━━ SCROLLBAR ━━━━━━━━━━━━━━ */
+::-webkit-scrollbar { width:6px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--warm-200); border-radius:3px; }
+::-webkit-scrollbar-thumb:hover { background:var(--ink-20); }
+
+/* ━━━━━━━━━━━━━━ RESPONSIVE ━━━━━━━━━━━━━━ */
+@media(max-width:960px) {
+  .builder-layout { grid-template-columns:1fr; }
+  .output-panel { position:static; }
+  .hero-costar { display:none; }
+  .hero-title { font-size:20px; }
+  .materials-grid { grid-template-columns:1fr 1fr; }
+  .other-chips-grid { grid-template-columns:1fr 1fr; }
+}
+@media(max-width:640px) {
+  .materials-grid { grid-template-columns:1fr; }
+  .header { padding:0 16px; }
+  .hero { padding:20px 16px; }
+  .main { padding:16px 14px 60px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ━━━━━━ HEADER ━━━━━━ -->
+<header class="header">
+  <div class="logo">
+    <div class="logo-badge">
+      <span class="logo-badge-text">Tr<em>AI</em></span>
+    </div>
+    <div class="logo-info">
+      <div class="logo-name">Tr<em>AI</em>ner <span style="color:var(--ink-20);font-weight:400;font-size:13px">·</span> CO-STAR Builder</div>
+      <div class="logo-tagline">Prompt Builder · Workshop Design</div>
+    </div>
+  </div>
+  <nav class="nav-wrap">
+    <button class="nav-btn active" onclick="switchTab('builder',this)">⌨ Tạo Prompt</button>
+    <button class="nav-btn" onclick="switchTab('materials',this)">🎨 Tài liệu</button>
+    <button class="nav-btn" onclick="switchTab('history',this)">🕐 Lịch sử</button>
+  </nav>
+</header>
+
+<!-- ━━━━━━ HERO ━━━━━━ -->
+<div class="hero" id="hero-bar">
+  <div class="hero-inner">
+    <div class="hero-left">
+      <div class="hero-eyebrow">Công cụ thiết kế Prompt dành cho Trainer</div>
+      <div class="hero-title">CO-STAR Prompt Builder<br><em>Workshop Edition</em></div>
+      <div class="hero-sub">Chọn loại Prompt → Câu mẫu hiện lên ngay → Chỉnh phần trong [ngoặc] → Copy vào AI</div>
+      <div class="hero-steps">
+        <div class="hero-step"><div class="hero-step-num">1</div> Chọn loại Prompt</div>
+        <div class="hero-step"><div class="hero-step-num">2</div> Chỉnh [ngoặc vuông]</div>
+        <div class="hero-step"><div class="hero-step-num">3</div> Bấm Tạo & Copy</div>
+      </div>
+    </div>
+    <div class="hero-costar">
+      <div class="cs-letter">C</div>
+      <div class="cs-letter">O</div>
+      <div class="cs-letter">S</div>
+      <div class="cs-letter">T</div>
+      <div class="cs-letter">A</div>
+      <div class="cs-letter">R</div>
+    </div>
+  </div>
+</div>
+
+<!-- ━━━━━━ TOAST ━━━━━━ -->
+<div class="toast" id="toast">
+  <div class="toast-icon" id="toast-icon">✓</div>
+  <span id="toast-msg"></span>
+</div>
+
+<!-- ━━━━━━ MAIN ━━━━━━ -->
+<main class="main">
+
+  <!-- ══════════ TAB: BUILDER ══════════ -->
+  <div class="panel active" id="panel-builder">
+    <div class="builder-layout">
+
+      <!-- LEFT -->
+      <div>
+        <!-- STEP 1 -->
+        <div class="section-eyebrow">
+          <div class="eyebrow-num">1</div>
+          <div class="eyebrow-text">Chọn loại Prompt <span class="eyebrow-hint">— theo quy trình thiết kế chương trình</span></div>
+          <div class="eyebrow-line"></div>
+        </div>
+
+        <div class="flow-group">
+          <div class="flow-group-header">
+            <div class="flow-header-icon">🔄</div>
+            <div class="flow-header-title">Quy trình thiết kế Workshop — Theo thứ tự</div>
+            <div class="flow-header-sub">7 bước</div>
+          </div>
+          <div class="flow-chips">
+
+            <div class="purpose-chip" onclick="selectPurpose(this,'tna_create')">
+              <div class="chip-step-badge">①</div>
+              <div class="chip-icon-wrap">📋</div>
+              <div class="chip-body">
+                <div class="chip-label">Tạo Form TNA</div>
+                <div class="chip-sub">ChatGPT / Claude — Khảo sát nhu cầu học viên trước Workshop</div>
+              </div>
+              <div class="chip-arrow">›</div>
+            </div>
+
+            <div class="purpose-chip" onclick="selectPurpose(this,'tna_analyze')">
+              <div class="chip-step-badge">②</div>
+              <div class="chip-icon-wrap">🔍</div>
+              <div class="chip-body">
+                <div class="chip-label">Phân tích kết quả TNA</div>
+                <div class="chip-sub">Claude — Tìm Learning Gap, phân loại rào cản, định hướng thiết kế</div>
+              </div>
+              <div class="chip-arrow">›</div>
+            </div>
+
+            <div class="purpose-chip" onclick="selectPurpose(this,'ask')">
+              <div class="chip-step-badge">③</div>
+              <div class="chip-icon-wrap">🎯</div>
+              <div class="chip-body">
+                <div class="chip-label">Xác định mục tiêu ASK</div>
+                <div class="chip-sub">Claude — Attitude · Skill · Knowledge — bước đầu Backward Design</div>
+              </div>
+              <div class="chip-arrow">›</div>
+            </div>
+
+            <div class="purpose-chip" onclick="selectPurpose(this,'outline')">
+              <div class="chip-step-badge">④</div>
+              <div class="chip-icon-wrap">📝</div>
+              <div class="chip-body">
+                <div class="chip-label">Tạo Outline Workshop</div>
+                <div class="chip-sub">Claude — Backward Design từ mục tiêu ASK, tỷ lệ thực hành 70%</div>
+              </div>
+              <div class="chip-arrow">›</div>
+            </div>
+
+            <div class="purpose-chip" onclick="selectPurpose(this,'activity')">
+              <div class="chip-step-badge">⑤</div>
+              <div class="chip-icon-wrap">🏃</div>
+              <div class="chip-body">
+                <div class="chip-label">Tạo Hoạt động học</div>
+                <div class="chip-sub">Claude / ChatGPT — Brief 4 ô · AI tự thiết kế + chọn loại hoạt động</div>
+              </div>
+              <div class="chip-arrow">›</div>
+            </div>
+
+            <div class="purpose-chip" onclick="selectPurpose(this,'slide')">
+              <div class="chip-step-badge">⑥</div>
+              <div class="chip-icon-wrap">🖼️</div>
+              <div class="chip-body">
+                <div class="chip-label">Tạo Slide Deck</div>
+                <div class="chip-sub">Claude / Gemini — Chuyển Outline thành cấu trúc Slide hoàn chỉnh</div>
+              </div>
+              <div class="chip-arrow">›</div>
+            </div>
+
+            <div class="purpose-chip" onclick="selectPurpose(this,'gamma_nb')">
+              <div class="chip-step-badge">⑦</div>
+              <div class="chip-icon-wrap">✨</div>
+              <div class="chip-body">
+                <div class="chip-label">Tạo Slide với Gamma / NotebookLM</div>
+                <div class="chip-sub">Gamma.app / NotebookLM — Render Slide từ cấu trúc đã có</div>
+              </div>
+              <div class="chip-arrow">›</div>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="other-group" style="margin-bottom:20px">
+          <div class="other-group-header">Mục đích khác</div>
+          <div class="other-chips-grid">
+            <div class="other-chip purpose-chip" onclick="selectPurpose(this,'roleplay')">
+              <div class="other-chip-icon">🎭</div>
+              <div class="other-chip-label">Script Role-play</div>
+              <div class="other-chip-sub">Kịch bản bán hàng / tư vấn</div>
+            </div>
+            <div class="other-chip purpose-chip" onclick="selectPurpose(this,'material')">
+              <div class="other-chip-icon">📄</div>
+              <div class="other-chip-label">Tài liệu học viên</div>
+              <div class="other-chip-sub">Handout, Flashcard, Mindmap</div>
+            </div>
+            <div class="other-chip purpose-chip" onclick="selectPurpose(this,'custom')">
+              <div class="other-chip-icon">✏️</div>
+              <div class="other-chip-label">Tự chọn</div>
+              <div class="other-chip-sub">Tự điền tất cả các ô</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- STEP 2 -->
+        <div class="section-eyebrow">
+          <div class="eyebrow-num">2</div>
+          <div id="step2-label" class="eyebrow-text">Điền 6 thành phần CO-STAR <span class="eyebrow-hint">— chỉnh phần trong [ ]</span></div>
+          <div class="eyebrow-line"></div>
+        </div>
+
+        <!-- ACTIVITY WIZARD — hiện khi chọn chip ⑤ -->
+        <div class="activity-wizard" id="activity-wizard" style="display:none;width:100%">
+
+          <!-- Header -->
+          <div style="background:linear-gradient(135deg,var(--red-deep) 0%,var(--red) 100%);border-radius:var(--r);padding:14px 18px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow-red);margin-bottom:4px">
+            <div style="font-size:24px">🏃</div>
+            <div>
+              <div style="font-family:'Roboto',sans-serif;font-weight:900;font-size:15px;color:white;margin-bottom:3px">Brief Hoạt động học</div>
+              <div style="font-size:12px;color:rgba(255,255,255,0.75)">Điền 4 ô · AI tự thiết kế & chọn loại phù hợp · Copy sang Claude</div>
+            </div>
+          </div>
+
+          <!-- Ô 1: Thông điệp -->
+          <div class="costar-field">
+            <div class="field-header">
+              <div class="field-badge" style="background:rgba(192,0,0,0.12);color:var(--red);font-family:'Roboto',sans-serif;font-weight:900;font-size:14px;width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</div>
+              <div class="field-meta">
+                <div class="field-name" style="color:var(--red)">Thông điệp / Mục tiêu sau hoạt động</div>
+                <div class="field-hint">Sau hoạt động này, học viên sẽ tự nhận ra / cảm nhận / làm được điều gì?</div>
+              </div>
+            </div>
+            <textarea id="wiz-message" class="field-input" rows="3"
+              placeholder="Ví dụ: Học viên tự nhận ra rằng cách họ đang mở đầu cuộc gọi khiến KH mất hứng ngay từ đầu — và tự đúc kết được 1 cách mở đầu tốt hơn..."></textarea>
+          </div>
+
+          <!-- Ô 2: Kiến thức nền -->
+          <div class="costar-field">
+            <div class="field-header">
+              <div class="field-badge" style="background:rgba(31,56,100,0.10);color:var(--navy);font-family:'Roboto',sans-serif;font-weight:900;font-size:14px;width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</div>
+              <div class="field-meta">
+                <div class="field-name" style="color:var(--navy)">Kiến thức nền / Nội dung học viên làm việc với</div>
+                <div class="field-hint">Material, quy trình, tình huống, hoặc kiến thức cụ thể học viên dùng trong hoạt động</div>
+              </div>
+            </div>
+            <textarea id="wiz-content" class="field-input" rows="2"
+              placeholder="Ví dụ: 3 loại phản đối phổ biến của KH BH nhân thọ — 'đắt quá', 'để suy nghĩ thêm', 'không có tiền'..."></textarea>
+          </div>
+
+          <!-- Ô 3 + 4: Thời lượng & Số học viên — 2 cột -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;min-width:0">
+
+            <div class="costar-field">
+              <div class="field-header">
+                <div class="field-badge" style="background:rgba(106,31,138,0.10);color:#6A1F8A;font-family:'Roboto',sans-serif;font-weight:900;font-size:14px;width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0">3</div>
+                <div class="field-meta">
+                  <div class="field-name" style="color:#6A1F8A">Thời lượng</div>
+                  <div class="field-hint">Tổng thời gian</div>
+                </div>
+              </div>
+              <input id="wiz-duration" type="text" class="field-input" style="min-height:unset;height:44px;resize:none;border-top:1px solid var(--warm-100)"
+                placeholder="Ví dụ: 20 phút">
+            </div>
+
+            <div class="costar-field">
+              <div class="field-header">
+                <div class="field-badge" style="background:rgba(230,81,0,0.10);color:#E65100;font-family:'Roboto',sans-serif;font-weight:900;font-size:14px;width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0">4</div>
+                <div class="field-meta">
+                  <div class="field-name" style="color:#E65100">Số học viên</div>
+                  <div class="field-hint">Tổng số người</div>
+                </div>
+              </div>
+              <input id="wiz-participants" type="text" class="field-input" style="min-height:unset;height:44px;resize:none;border-top:1px solid var(--warm-100)"
+                placeholder="Ví dụ: 12 người">
+            </div>
+
+          </div>
+
+          <!-- Ô 5: Loại hoạt động -->
+          <div class="costar-field">
+            <div class="field-header">
+              <div class="field-badge" style="background:rgba(46,125,50,0.10);color:#2E7D32;font-family:'Roboto',sans-serif;font-weight:900;font-size:14px;width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0">5</div>
+              <div class="field-meta">
+                <div class="field-name" style="color:#2E7D32">Loại hoạt động &nbsp;<span style="font-weight:400;color:var(--ink-40);font-size:11px">(không bắt buộc)</span></div>
+                <div class="field-hint">Để trống — AI tự chọn từ 10 loại phù hợp nhất với thông điệp và số học viên</div>
+              </div>
+            </div>
+            <div style="padding:0 0 0;border-top:1px solid var(--warm-100)">
+              <select id="wiz-type" style="width:100%;background:var(--warm-50);border:none;padding:11px 36px 11px 14px;color:var(--ink);font-size:12.5px;font-family:'Roboto',sans-serif;outline:none;cursor:pointer;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;transition:background 0.15s">
+                <option value="">🤖  AI tự chọn loại hoạt động phù hợp nhất</option>
+                <option value="Video Clip">🎬  Video Clip — Thu hút chú ý, minh họa trực quan</option>
+                <option value="Brainstorming">💡  Brainstorming — Kích thích sáng tạo, thu thập ý tưởng</option>
+                <option value="Brainstorming 6-3-5">💡  Brainstorming 6-3-5 — Mở rộng ý tưởng tập thể</option>
+                <option value="Gallery Walk">🖼️  Gallery Walk (Triển lãm) — Chia sẻ và học hỏi lẫn nhau</option>
+                <option value="Bus Stop">🚏  Bus Stop (Trạm dừng) — Thảo luận nhiều góc nhìn</option>
+                <option value="Role Play">🎭  Role Play (Đóng vai) — Luyện kỹ năng giao tiếp</option>
+                <option value="Gamification">🎮  Gamification — Tăng hứng thú, cạnh tranh lành mạnh</option>
+                <option value="Case Study">📋  Case Study — Phân tích tình huống, ra quyết định</option>
+                <option value="Think-Pair-Share">🤝  Think–Pair–Share — Khuyến khích suy nghĩ và chia sẻ</option>
+                <option value="Ráp nối / Matching">🔗  Ráp nối / Matching — Ghi nhớ khái niệm, thuật ngữ</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Tip -->
+          <div style="background:var(--gold-light,#FFFCE8);border:1px solid rgba(245,197,24,0.4);border-radius:var(--r-sm);padding:10px 14px;font-size:12.5px;color:var(--ink-60);line-height:1.6;display:flex;gap:8px;align-items:flex-start">
+            <span style="font-size:15px;flex-shrink:0;margin-top:1px">💡</span>
+            <span>AI sẽ chọn loại hoạt động tốt nhất dựa vào thông điệp và số học viên — rồi trả về đúng bảng 5 hàng chuẩn: <strong>Tên · Mục tiêu · Thời lượng & Vật liệu · Quy trình chi tiết · Đúc kết</strong></span>
+          </div>
+
+          <div class="action-bar">
+            <button class="btn-primary" onclick="buildActivityPrompt()">⚡ Tạo Prompt Hoạt động</button>
+            <button class="btn-ghost" onclick="resetActivityWizard()">↺ Làm lại</button>
+          </div>
+
+        </div>
+        <!-- /ACTIVITY WIZARD -->
+
+        <div class="costar-form" id="costar-form-wrap">
+          <!-- C -->
+          <div class="costar-field">
+            <div class="field-header">
+              <div class="field-badge badge-c">C</div>
+              <div class="field-meta">
+                <div class="field-name" style="color:var(--lc)">Context — Bối cảnh</div>
+                <div class="field-hint">Tôi đang dạy ai, ở đâu, họ đang gặp khó khăn gì?</div>
+              </div>
+            </div>
+            <textarea id="f-c" class="field-input" rows="2" placeholder="Chọn loại Prompt ở trên để xem câu mẫu..."></textarea>
+          </div>
+          <!-- O -->
+          <div class="costar-field">
+            <div class="field-header">
+              <div class="field-badge badge-o">O</div>
+              <div class="field-meta">
+                <div class="field-name" style="color:var(--lo)">Objective — Mục tiêu</div>
+                <div class="field-hint">Tôi muốn AI tạo ra thứ gì cụ thể?</div>
+              </div>
+            </div>
+            <textarea id="f-o" class="field-input" rows="2" placeholder="Chọn loại Prompt ở trên để xem câu mẫu..."></textarea>
+          </div>
+          <!-- S -->
+          <div class="costar-field">
+            <div class="field-header">
+              <div class="field-badge badge-s">S</div>
+              <div class="field-meta">
+                <div class="field-name" style="color:var(--ls)">Style — Phong cách</div>
+                <div class="field-hint">Nội dung cần được viết theo phong cách nào?</div>
+              </div>
+            </div>
+            <div class="field-tags">
+              <span class="tag-pill" onclick="appendTag('f-s',this.textContent)">Thực chiến</span>
+              <span class="tag-pill" onclick="appendTag('f-s',this.textContent)">Học thuật</span>
+              <span class="tag-pill" onclick="appendTag('f-s',this.textContent)">Storytelling</span>
+              <span class="tag-pill" onclick="appendTag('f-s',this.textContent)">Súc tích</span>
+              <span class="tag-pill" onclick="appendTag('f-s',this.textContent)">Không lý thuyết</span>
+            </div>
+            <textarea id="f-s" class="field-input" rows="1" placeholder="Ví dụ: Thực chiến, tình huống thật trong ngành BH nhân thọ, không lý thuyết..."></textarea>
+          </div>
+          <!-- T -->
+          <div class="costar-field">
+            <div class="field-header">
+              <div class="field-badge badge-t">T</div>
+              <div class="field-meta">
+                <div class="field-name" style="color:var(--lt)">Tone — Giọng điệu</div>
+                <div class="field-hint">Giọng điệu phù hợp là gì?</div>
+              </div>
+            </div>
+            <div class="field-tags">
+              <span class="tag-pill" onclick="setTag('f-t',this.textContent)">Gần gũi</span>
+              <span class="tag-pill" onclick="setTag('f-t',this.textContent)">Chuyên nghiệp</span>
+              <span class="tag-pill" onclick="setTag('f-t',this.textContent)">Truyền cảm hứng</span>
+              <span class="tag-pill" onclick="setTag('f-t',this.textContent)">Nghiêm túc</span>
+              <span class="tag-pill" onclick="setTag('f-t',this.textContent)">Năng động</span>
+            </div>
+            <textarea id="f-t" class="field-input" rows="1" placeholder="Ví dụ: Gần gũi, dễ hiểu, phù hợp người đi làm..."></textarea>
+          </div>
+          <!-- A -->
+          <div class="costar-field">
+            <div class="field-header">
+              <div class="field-badge badge-a">A</div>
+              <div class="field-meta">
+                <div class="field-name" style="color:var(--la)">Audience — Đối tượng</div>
+                <div class="field-hint">Người học là ai? Kinh nghiệm, đặc điểm, vấn đề đang gặp?</div>
+              </div>
+            </div>
+            <div class="field-tags">
+              <span class="tag-pill" onclick="appendTag('f-a',this.textContent)">Sale mới &lt;6 tháng</span>
+              <span class="tag-pill" onclick="appendTag('f-a',this.textContent)">TVV 2–5 năm KN</span>
+              <span class="tag-pill" onclick="appendTag('f-a',this.textContent)">Agency Leader</span>
+              <span class="tag-pill" onclick="appendTag('f-a',this.textContent)">Gen Z 22–27 tuổi</span>
+              <span class="tag-pill" onclick="appendTag('f-a',this.textContent)">Trainer nội bộ</span>
+            </div>
+            <textarea id="f-a" class="field-input" rows="2" placeholder="Ví dụ: Sale Gen Z, 22–27 tuổi, chưa có kinh nghiệm giao tiếp với KH lớn tuổi..."></textarea>
+          </div>
+          <!-- R -->
+          <div class="costar-field">
+            <div class="field-header">
+              <div class="field-badge badge-r">R</div>
+              <div class="field-meta">
+                <div class="field-name" style="color:var(--lr)">Response — Định dạng output</div>
+                <div class="field-hint">Kết quả cần trông như thế nào? Bao nhiêu phần?</div>
+              </div>
+            </div>
+            <div class="field-tags">
+              <span class="tag-pill" onclick="appendTag('f-r',this.textContent)">Script 2 vai</span>
+              <span class="tag-pill" onclick="appendTag('f-r',this.textContent)">Bảng so sánh</span>
+              <span class="tag-pill" onclick="appendTag('f-r',this.textContent)">Gạch đầu dòng</span>
+              <span class="tag-pill" onclick="appendTag('f-r',this.textContent)">Outline 4 phần</span>
+              <span class="tag-pill" onclick="appendTag('f-r',this.textContent)">Kèm hướng dẫn Trainer</span>
+            </div>
+            <textarea id="f-r" class="field-input" rows="2" placeholder="Ví dụ: Script 2 vai (Sale/KH), 15 phút, hướng dẫn riêng cho Trainer quan sát..."></textarea>
+          </div>
+        </div><!-- /costar-form -->
+
+        <div class="action-bar" id="costar-action-bar">
+          <button class="btn-primary" onclick="buildPrompt()">⚡ Tạo Prompt CO-STAR</button>
+          <button class="btn-ghost" onclick="resetForm()">↺ Làm lại</button>
+        </div>
+      </div>
+
+      <!-- RIGHT: OUTPUT -->
+      <div class="output-panel">
+        <div class="output-card">
+          <div class="output-header">
+            <div class="output-header-left">
+              <div class="output-dot"></div>
+              <div class="output-label">Prompt Output</div>
+            </div>
+            <div class="output-actions">
+              <button class="btn-output btn-output-ghost" onclick="copyRaw()">Raw</button>
+              <button class="btn-output btn-output-white" onclick="copyPrompt()">Copy Prompt</button>
+            </div>
+          </div>
+          <div class="output-body" id="output-body">
+            <div class="output-empty">
+              <div class="output-empty-icon">💬</div>
+              <div>Chọn loại Prompt → Chỉnh nội dung<br>→ Bấm <strong>Tạo Prompt</strong></div>
+            </div>
+          </div>
+          <div class="tool-bar" id="tool-suggest">
+            <span>→ Dùng tốt nhất với:</span>
+            <span class="tool-badge" id="tool-badge-1"></span>
+            <span class="tool-badge" id="tool-badge-2"></span>
+          </div>
+        </div>
+
+        <!-- History strip -->
+        <div class="history-strip" id="history-strip">
+          <div class="history-strip-label">
+            <span>🕐</span> Prompt gần nhất
+          </div>
+          <div class="history-list" id="history-items">
+            <div style="font-size:11px;color:var(--ink-20);padding:4px 0;text-align:center">Chưa có lịch sử. Tạo Prompt đầu tiên!</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════════ TAB: MATERIALS ══════════ -->
+  <div class="panel" id="panel-materials">
+    <div class="section-eyebrow" style="margin-bottom:20px">
+      <div class="eyebrow-num" style="background:var(--ink)">🎨</div>
+      <div class="eyebrow-text">Tạo Tài liệu đào tạo <span class="eyebrow-hint">— Ảnh minh họa · NotebookLM · Tips</span></div>
+      <div class="eyebrow-line"></div>
+    </div>
+    <div class="materials-grid">
+
+      <!-- ẢNH MINH HỌA -->
+      <div class="mat-card">
+        <div class="mat-card-top">
+          <div class="mat-card-icon" style="background:#F0FDF4">🎨</div>
+          <div>
+            <div class="mat-card-title">Tạo Ảnh minh họa</div>
+            <div class="mat-card-sub">ChatGPT DALL-E 3 / Gemini</div>
+          </div>
+        </div>
+        <div class="mat-card-body">
+          <span class="mat-label">Loại ảnh</span>
+          <div class="mat-chips-grid" style="grid-template-columns:1fr 1fr 1fr">
+            <div class="mat-chip" onclick="selectMat(this,'image','slide16_9')">Ảnh Slide 16:9</div>
+            <div class="mat-chip" onclick="selectMat(this,'image','infographic')">Infographic</div>
+            <div class="mat-chip" onclick="selectMat(this,'image','visual')">Visual story</div>
+            <div class="mat-chip" onclick="selectMat(this,'image','scene')">Tình huống</div>
+            <div class="mat-chip" onclick="selectMat(this,'image','icon')">Icon / Diagram</div>
+          </div>
+          <span class="mat-label">Mô tả nội dung ảnh</span>
+          <textarea class="mat-input" id="image-desc" placeholder="Ví dụ: 3 bước tiếp cận KH lần đầu trong BH nhân thọ..."></textarea>
+          <span class="mat-label">Phong cách & màu sắc</span>
+          <input class="mat-input small" id="image-style" placeholder="Ví dụ: Tối giản, đỏ #C00000 và trắng, chuyên nghiệp">
+          <span class="mat-label">Mục đích sử dụng</span>
+          <input class="mat-input small" id="image-use" placeholder="Ví dụ: Slide bài giảng, in A4, đăng Facebook">
+          <button class="btn-mat" onclick="buildImagePrompt()">🎨 Tạo Prompt Ảnh</button>
+          <div class="mat-output" id="image-output">
+            <div class="mat-output-header">
+              <span class="mat-output-label">→ Dán vào ChatGPT (DALL-E 3) hoặc Gemini</span>
+              <button class="btn-output btn-output-white" style="font-size:10px;padding:3px 10px" onclick="copyMat('image-output-body')">Copy</button>
+            </div>
+            <div class="mat-output-body" id="image-output-body"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- NOTEBOOKLM -->
+      <div class="mat-card">
+        <div class="mat-card-top">
+          <div class="mat-card-icon" style="background:#EFF6FF">📓</div>
+          <div>
+            <div class="mat-card-title">NotebookLM</div>
+            <div class="mat-card-sub">Tạo câu hỏi sau khi upload tài liệu</div>
+          </div>
+        </div>
+        <div class="mat-card-body">
+          <span class="mat-label">Loại tài liệu cần tạo</span>
+          <div class="mat-chips-grid">
+            <div class="mat-chip" onclick="selectMat(this,'nb','handout')">Handout 1 trang</div>
+            <div class="mat-chip" onclick="selectMat(this,'nb','flashcard')">Flashcard ôn tập</div>
+            <div class="mat-chip" onclick="selectMat(this,'nb','mindmap')">Mindmap cấu trúc</div>
+            <div class="mat-chip" onclick="selectMat(this,'nb','tna')">Phân tích TNA</div>
+          </div>
+          <span class="mat-label">Tài liệu đã upload là gì?</span>
+          <textarea class="mat-input" id="nb-content" placeholder="Ví dụ: Outline Workshop 3 tiếng về kỹ năng tiếp cận KH..."></textarea>
+          <span class="mat-label">Đối tượng nhận tài liệu</span>
+          <input class="mat-input small" id="nb-audience" placeholder="Ví dụ: Sale BH mới, 22–27 tuổi">
+          <button class="btn-mat" onclick="buildNBPrompt()">📓 Tạo câu hỏi cho NotebookLM</button>
+          <div class="mat-output" id="nb-output">
+            <div class="mat-output-header">
+              <span class="mat-output-label">→ Dán vào NotebookLM sau khi upload file</span>
+              <button class="btn-output btn-output-white" style="font-size:10px;padding:3px 10px" onclick="copyMat('nb-output-body')">Copy</button>
+            </div>
+            <div class="mat-output-body" id="nb-output-body"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TIPS -->
+      <div class="mat-card">
+        <div class="mat-card-top">
+          <div class="mat-card-icon" style="background:#FFFBEB">💡</div>
+          <div>
+            <div class="mat-card-title">Tips quan trọng</div>
+            <div class="mat-card-sub">Dùng AI tạo tài liệu hiệu quả</div>
+          </div>
+        </div>
+        <div class="mat-card-body">
+          <div class="tip-row">
+            <div class="tip-item" style="border-color:var(--red)">
+              <div class="tip-title" style="color:var(--red)">🎨 Tạo ảnh</div>
+              Luôn thêm <em>"Không có chữ trong ảnh"</em> để tránh lỗi font tiếng Việt trong DALL-E 3. Nói rõ kích thước và mục đích sử dụng.
+            </div>
+            <div class="tip-item" style="border-color:#1565C0">
+              <div class="tip-title" style="color:#1565C0">📓 NotebookLM</div>
+              Upload nhiều file cùng lúc để AI tổng hợp tốt hơn. Podcast hỗ trợ tiếng Anh tốt hơn tiếng Việt hiện tại.
+            </div>
+            <div class="tip-item" style="border-color:#2E7D32">
+              <div class="tip-title" style="color:#2E7D32">🖼️ Slide Gamma</div>
+              Sau khi Gamma tạo slide: (1) Thay ảnh bằng ảnh thật từ đội ngũ, (2) Kiểm tra số liệu và dữ liệu thực tế, (3) Thêm câu chuyện thật của bạn vào slide mở đầu.
+            </div>
+            <div class="tip-item" style="border-color:#E65100">
+              <div class="tip-title" style="color:#E65100">⚠️ Bảo mật</div>
+              Không upload tài liệu có tên khách hàng thật. Ẩn thông tin cá nhân trước khi đưa vào bất kỳ AI nào.
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════════ TAB: HISTORY ══════════ -->
+  <div class="panel" id="panel-history">
+    <div class="section-eyebrow" style="margin-bottom:20px">
+      <div class="eyebrow-num" style="background:var(--ink)">🕐</div>
+      <div class="eyebrow-text">Lịch sử Prompt <span class="eyebrow-hint">— 5 Prompt gần nhất trong phiên làm việc</span></div>
+      <div class="eyebrow-line"></div>
+    </div>
+    <div id="history-full-list">
+      <div style="text-align:center;padding:80px 20px;color:var(--ink-20)">
+        <div style="font-size:48px;margin-bottom:14px">🕐</div>
+        <div style="font-size:14px;font-family:'Roboto',sans-serif;font-weight:700">Chưa có lịch sử</div>
+        <div style="font-size:12px;margin-top:6px">Tạo Prompt đầu tiên ở tab "Tạo Prompt"!</div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+// ━━━━━━ STATE ━━━━━━
+let currentPurpose = '';
+let currentTools = [];
+let matSelections = { slide:'', image:'', nb:'' };
+let history = JSON.parse(sessionStorage.getItem('costar_history') || '[]');
+
+// ━━━━━━ TAB SWITCH ━━━━━━
+function switchTab(tab, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-'+tab).classList.add('active');
+  if(btn) btn.classList.add('active');
+  if(tab === 'history') renderHistoryFull();
+  // hide hero on non-builder tabs
+  document.getElementById('hero-bar').style.display = tab === 'builder' ? '' : 'none';
+}
+
+// ━━━━━━ PURPOSE TEMPLATES ━━━━━━
+const purposeTemplates = {
+  tna_create: {
+    c: 'Tôi là Trainer đang chuẩn bị thiết kế Workshop về [chủ đề cụ thể] cho [đối tượng học viên].',
+    o: 'Tôi muốn có Form TNA để hiểu rõ thực trạng, nhu cầu và kỳ vọng của học viên trước khi thiết kế nội dung. Form sẽ gửi qua Google Form hoặc chia sẻ trực tiếp.',
+    s: 'Câu hỏi mở, thực tế, khai thác kinh nghiệm thật — dễ trả lời, không cảm giác như bài kiểm tra',
+    t: 'Gần gũi, tôn trọng kinh nghiệm của người tham gia, khuyến khích chia sẻ thật',
+    a: '[Mô tả đối tượng: chức danh, số năm kinh nghiệm, đặc điểm nổi bật, khó khăn họ hay gặp]',
+    r: 'Form TNA gồm 8–10 câu, chia 3 nhóm: (1) Thực trạng hiện tại — 3 câu, (2) Khó khăn cụ thể — 3 câu, (3) Kỳ vọng sau Workshop — 2 câu. Có cả câu đóng (chọn đáp án) và câu mở (tự trả lời).',
+    tools: ['ChatGPT', 'Claude']
+  },
+  tna_analyze: {
+    c: 'Tôi là Trainer. File đính kèm là kết quả TNA từ [số lượng] người tham gia Workshop về [chủ đề]. Đây là dữ liệu thực từ đội ngũ của tôi.',
+    o: 'Phân tích kết quả TNA để xác định: (1) Learning Gap lớn nhất của nhóm, (2) Điểm mạnh hiện có có thể khai thác, (3) Ưu tiên thiết kế chương trình.',
+    s: 'Phân tích dựa trên dữ liệu thực tế, không phỏng đoán — chỉ kết luận những gì có căn cứ từ kết quả TNA',
+    t: 'Khách quan, thực tế, giúp Trainer ra quyết định thiết kế rõ ràng',
+    a: 'Trainer cần insight thực tế để thiết kế Workshop phù hợp nhóm cụ thể này',
+    r: 'Báo cáo phân tích gồm: (1) Top 3 Learning Gap theo tần suất xuất hiện, (2) Điểm khởi đầu tốt (điều họ đã biết/làm được), (3) Gợi ý 3 ưu tiên nội dung cho Workshop, (4) 1–2 câu trích dẫn tiêu biểu từ kết quả.',
+    tools: ['Claude', 'NotebookLM']
+  },
+  ask: {
+    c: 'Tôi là Trainer. Kết quả phân tích TNA cho thấy Learning Gap lớn nhất của nhóm là: [mô tả Learning Gap cụ thể từ bước phân tích TNA]. Đây là Workshop [X tiếng] cho [đối tượng cụ thể].',
+    o: 'Xác định mục tiêu học tập cho Workshop theo mô hình ASK — đây là bước đầu tiên trong Backward Design, phải hoàn thành trước khi thiết kế nội dung và hoạt động.',
+    s: 'Mục tiêu đo lường được bằng hành vi quan sát được sau buổi học — không dùng "hiểu được" hay "nắm được", chỉ dùng động từ hành động cụ thể như: viết được, trình bày được, xử lý được, áp dụng được.',
+    t: 'Chuyên nghiệp, rõ ràng — phù hợp để đưa vào tài liệu chương trình chính thức',
+    a: '[Mô tả chi tiết: chức danh, số năm KN, điểm stuck, điểm mạnh hiện có — để mục tiêu không dạy lại những gì họ đã biết]',
+    r: 'Mục tiêu theo 3 nhóm ASK:\n- Attitude (Tư duy/Thái độ): 1–2 mục tiêu về cách nhìn nhận của học viên sau Workshop\n- Skill (Kỹ năng): 2–3 mục tiêu — việc học viên làm được ngay sau buổi học\n- Knowledge (Kiến thức): 1–2 mục tiêu về framework và công cụ\nCấu trúc mỗi mục tiêu: "Sau Workshop, học viên [động từ hành động] + [điều kiện cụ thể] + [tiêu chí đánh giá có thể quan sát được]."',
+    tools: ['Claude']
+  },
+  outline: {
+    c: 'Tôi đã có bộ mục tiêu ASK cho Workshop [X tiếng] về [chủ đề] cho [đối tượng]. Bước tiếp theo là thiết kế Outline theo Backward Design — đi từ mục tiêu đã xác định để thiết kế ngược về nội dung và hoạt động.',
+    o: 'Thiết kế Outline Workshop [X tiếng] theo Backward Design — mỗi phần và hoạt động phải trace ngược được về 1 mục tiêu ASK cụ thể đã xác định.',
+    s: 'Facilitation — không lecture, ít nhất 70% thời gian thực hành, học viên tự khám phá và đúc kết. Mỗi phần kết thúc bằng 1 output cụ thể học viên tạo ra được.',
+    t: 'Chuyên nghiệp, thực chiến, tôn trọng kinh nghiệm trainer lâu năm',
+    a: '[Mô tả chi tiết: chức danh, số năm KN, điểm stuck, kỳ vọng sau WS]',
+    r: 'Outline đầy đủ gồm:\n(1) Tên từng phần + mục tiêu phần đó trace về ASK nào\n(2) Thời lượng từng phần — tổng đúng [X] tiếng\n(3) Phương pháp: Facilitation, Case study, Role-play, Thảo luận nhóm...\n(4) Hoạt động học cụ thể cho mỗi phần\n(5) Output học viên tạo ra được cuối mỗi phần\n(6) Output cam kết cuối toàn bộ Workshop',
+    tools: ['Claude']
+  },
+  activity: {
+    c: 'Tôi là Trainer. Đang thiết kế Workshop về [chủ đề] cho [đối tượng]. Phần [tên phần trong Outline] cần 1 hoạt động học thực hành.',
+    o: 'Thiết kế chi tiết 1 hoạt động học [loại hoạt động: role-play / case study / thảo luận nhóm / trò chơi / bài tập cá nhân] cho phần này.',
+    s: 'Facilitation — người học tự khám phá ra insight, không nghe thuyết trình; đủ cụ thể để Trainer dẫn dắt được ngay',
+    t: 'Năng động, tương tác cao, phù hợp với [đặc điểm nhóm: số người, cách học, thiết bị có sẵn]',
+    a: '[Số người tham gia], [kinh nghiệm], [thiết bị/không gian có sẵn trong phòng]',
+    r: 'Thiết kế hoạt động gồm: Tên hoạt động · Mục tiêu học · Vật liệu cần chuẩn bị · Quy trình từng bước (rõ theo thời gian) · Câu hỏi đúc kết cuối hoạt động · Thời lượng tổng [X] phút.',
+    tools: ['Claude', 'ChatGPT']
+  },
+  slide: {
+    c: 'Tôi là Trainer. File đính kèm là Outline Workshop về: [tên chủ đề Workshop]. Tôi cần chuyển Outline này thành cấu trúc Slide Deck hoàn chỉnh.',
+    o: 'Chuyển Outline thành danh sách đầy đủ các slide, theo thứ tự từng phần trong Outline. Mỗi phần trong Outline = 1 nhóm slide. Mỗi hoạt động học = ít nhất 1 slide hướng dẫn riêng.',
+    s: 'Tối giản, trực quan — 1 thông điệp chính mỗi slide, tối đa 30 từ/slide. Slide hướng dẫn hoạt động phải đủ rõ để học viên đọc là hiểu ngay, không cần giải thích thêm.',
+    t: 'Chuyên nghiệp, năng động, phù hợp người học để áp dụng ngay',
+    a: '[Mô tả đối tượng học viên: chức danh, đặc điểm, thiết bị họ dùng khi học]',
+    r: 'Danh sách [X] slide, mỗi slide ghi rõ: Số thứ tự · Tên slide · Loại slide (Title / Content / Activity / Quote / Summary / CTA) · Nội dung chính ≤3 dòng, ≤10 từ/dòng · Gợi ý hình ảnh minh họa · Ghi chú cho Trainer khi trình bày.\n\n→ Sau khi có cấu trúc này, copy và dán vào Gamma.app để render thành slide đẹp.',
+    tools: ['Claude', 'Gemini']
+  },
+  gamma_nb: {
+    c: 'Tôi là Trainer. Tôi đã có cấu trúc Slide Deck hoàn chỉnh (danh sách slide với nội dung từng slide) cho Workshop về [chủ đề].',
+    o: 'Hãy format lại cấu trúc Slide Deck này thành định dạng phù hợp để import vào [Gamma.app / NotebookLM] — đảm bảo mỗi slide rõ ràng, đúng thứ tự, và dễ dàng render thành slide đẹp.',
+    s: 'Rõ ràng, có cấu trúc phân cấp, phân biệt rõ tiêu đề / nội dung / ghi chú cho Trainer',
+    t: 'Chuyên nghiệp, đơn giản, dễ đọc khi import',
+    a: 'Trainer cần file sẵn sàng để import và render ngay trong Gamma hoặc NotebookLM',
+    r: 'Cấu trúc đã được format theo chuẩn [Gamma.app: dùng dấu ### cho tiêu đề slide / NotebookLM: upload file và hỏi để tạo tóm tắt từng phần]. Kèm hướng dẫn ngắn các bước import cụ thể.',
+    tools: ['Gamma.app', 'NotebookLM']
+  },
+  roleplay: {
+    c: 'Tôi là Trainer. Học viên đang gặp tình huống: [mô tả tình huống cụ thể — ví dụ: khách hàng nói "để tôi suy nghĩ thêm" sau khi nghe trình bày].',
+    o: 'Tạo [số lượng: 1–3] kịch bản role-play giúp học viên thực hành [kỹ năng cụ thể: xử lý từ chối / mở đầu cuộc gặp / chốt hợp đồng].',
+    s: 'Thực chiến, tình huống cụ thể trong ngành BH nhân thọ, không lý thuyết — ngôn ngữ tự nhiên như cuộc trò chuyện thật',
+    t: 'Gần gũi, tự nhiên, không nghe như đọc kịch bản — phù hợp để thực hành trực tiếp trong lớp',
+    a: '[Mô tả học viên: chức danh, kinh nghiệm, điểm yếu cần luyện tập]',
+    r: 'Script 2 vai (Sale / Khách hàng), thời lượng [X] phút, chia rõ lượt thoại. Kèm hướng dẫn riêng cho Trainer: điểm cần quan sát, câu hỏi đúc kết sau role-play.',
+    tools: ['ChatGPT', 'Claude']
+  },
+  material: {
+    c: 'Tôi là Trainer. File tài liệu đính kèm là Outline/Slide về [chủ đề] cho [đối tượng học viên].',
+    o: 'Tạo [loại tài liệu: handout 1 trang / 10 flashcard / cấu trúc mindmap] từ nội dung tài liệu đính kèm.',
+    s: 'Súc tích, dễ nhớ, ngôn ngữ thực tế phù hợp với người đi làm — không học thuật',
+    t: 'Dễ hiểu, thân thiện, đọc xong là nhớ ngay',
+    a: '[Mô tả người nhận tài liệu: Sale mới / TVV lâu năm / Agency Leader]',
+    r: '[Chọn 1: Handout 1 trang gồm mục tiêu + 5 điểm trọng tâm + 3 câu hỏi phản chiếu] hoặc [10 Flashcard: mỗi card 1 câu hỏi ngắn mặt trước + 1 câu trả lời súc tích mặt sau] hoặc [Cấu trúc Mindmap dạng text, dùng → cho nhánh chính, • cho node con].',
+    tools: ['Claude', 'NotebookLM']
+  },
+  custom: {
+    c:'', o:'', s:'', t:'', a:'', r:'',
+    tools: ['ChatGPT', 'Claude', 'Gemini']
+  }
+};
+
+
+// ━━━━━━ ACTIVITY TAXONOMY ━━━━━━
+const ACTIVITY_TAXONOMY = `| Tên Hoạt Động | Mục Tiêu | Nội Dung Phù Hợp | Cách Triển Khai | Lưu Ý |
+| --- | --- | --- | --- | --- |
+| Video Clip | Thu hút chú ý, minh họa trực quan | Giới thiệu chủ đề, truyền cảm hứng | Chiếu video ngắn 2–5 phút rồi thảo luận | Không chiếu quá dài |
+| Brainstorming | Kích thích sáng tạo, thu thập ý tưởng | Giải quyết vấn đề, sáng kiến mới | Các cá nhân/nhóm đưa ý tưởng liên tục | Không phê phán ý tưởng ban đầu |
+| Brainstorming 6-3-5 | Mở rộng ý tưởng tập thể | Ý tưởng cải tiến, đổi mới | 6 người viết 3 ý tưởng trong 5 phút | Phù hợp nhóm nhỏ |
+| Gallery Walk | Chia sẻ và học hỏi lẫn nhau | Tổng kết kiến thức, dự án nhóm | Dán kết quả quanh lớp để học viên tham quan | Cần không gian rộng |
+| Bus Stop | Thảo luận nhiều góc nhìn | Chủ đề phức tạp, ôn tập | Nhóm di chuyển qua các trạm câu hỏi | Chuẩn bị câu hỏi rõ ràng |
+| Role Play | Luyện kỹ năng giao tiếp | Bán hàng, CSKH, xử lý tình huống | Học viên nhập vai theo kịch bản | Tạo môi trường an toàn |
+| Gamification | Tăng hứng thú và cạnh tranh | Quiz, ôn tập kiến thức | Áp dụng trò chơi, điểm số, thử thách | Không để game lấn át mục tiêu học |
+| Case Study | Phân tích và ra quyết định | Chiến lược, xử lý vấn đề | Phân tích tình huống thực tế | Phù hợp học viên có kinh nghiệm |
+| Think–Pair–Share | Khuyến khích suy nghĩ và chia sẻ | Kiểm tra hiểu bài nhanh | Suy nghĩ cá nhân → trao đổi cặp → chia sẻ | Hiệu quả với lớp đông |
+| Ráp nối / Matching | Ghi nhớ khái niệm, kết nối thuật ngữ | Từ vựng, quy trình, định nghĩa | Học viên ghép nội dung với tiêu đề đúng | Chuẩn bị thẻ/phong bì sẵn |`;
+
+
+// ━━━━━━ BUILD ACTIVITY PROMPT ━━━━━━
+function buildActivityPrompt() {
+  const message    = document.getElementById('wiz-message').value.trim();
+  const content    = document.getElementById('wiz-content').value.trim();
+  const duration   = document.getElementById('wiz-duration').value.trim();
+  const people     = document.getElementById('wiz-participants').value.trim();
+  const actType    = document.getElementById('wiz-type').value;
+
+  if (!message) { showToast('Điền thông điệp / mục tiêu trước!', false); return; }
+  if (!content)  { showToast('Điền kiến thức nền / material trước!', false); return; }
+  if (!duration) { showToast('Điền thời lượng trước!', false); return; }
+  if (!people)   { showToast('Điền số học viên trước!', false); return; }
+
+  const typeInstruction = actType
+    ? `Loại hoạt động: Trainer chỉ định dùng "${actType}".`
+    : `Loại hoạt động: Tự chọn loại phù hợp nhất từ danh sách taxonomy bên dưới — dựa vào thông điệp, nội dung và số học viên. Ghi rõ loại đã chọn và lý do ngắn gọn.`;
+
+  const prompt = `(C) Tôi là Trainer đang thiết kế 1 hoạt động học cho Workshop. Dưới đây là danh sách các loại hoạt động tôi có thể sử dụng (taxonomy):
+
+${ACTIVITY_TAXONOMY}
+
+(O) Thiết kế chi tiết 1 hoạt động học hoàn chỉnh với thông số sau:
+- Thông điệp / Mục tiêu: ${message}
+- Kiến thức nền / Material học viên làm việc với: ${content}
+- Thời lượng: ${duration}
+- Số học viên: ${people}
+- ${typeInstruction}
+
+(S) Facilitation hoàn toàn — không có phần giảng viên thuyết trình lý thuyết. Học viên tự khám phá, tự đúc kết. Quy trình đủ chi tiết để một Trainer khác đọc là dẫn dắt được ngay không cần hỏi thêm.
+
+(T) Thực chiến, năng động — phù hợp với người đi làm trong ngành bảo hiểm nhân thọ.
+
+(A) Trainer lâu năm — người thiết kế cần output đủ cụ thể để dùng ngay trong buổi đào tạo thực tế.
+
+(R) Trả về đúng bảng 4 hàng theo format chuẩn sau — không thêm bớt cột, không viết dạng tự do:
+
+| | |
+|---|---|
+| **Tên hoạt động** | [Tên gợi nhớ + loại hoạt động đã chọn] |
+| **Mục tiêu** | [Học viên làm được / nhận ra / cảm nhận được gì sau hoạt động] |
+| **Thời lượng & Vật liệu** | [Tổng thời gian · Danh sách vật liệu cần chuẩn bị: giấy, bút, phong bì, slide, handout...] |
+| **Quy trình** | [Từng bước chi tiết theo thời gian thực tế: GV nói gì · phát gì · nhóm làm gì · GV hỏi gì · xử lý tình huống · thời gian từng bước] |
+| **Đúc kết** | [GV nói gì để chốt thông điệp sau hoạt động — câu đúc kết dẫn vào nội dung tiếp theo] |`;
+
+  // Show in output panel
+  const body = document.getElementById('output-body');
+  body.textContent = prompt;
+
+  // Tool suggestion
+  const ts = document.getElementById('tool-suggest');
+  ts.style.display = 'flex';
+  document.getElementById('tool-badge-1').textContent = 'Claude';
+  document.getElementById('tool-badge-2').textContent = 'ChatGPT';
+
+  // Save to history
+  const now = new Date();
+  const timeStr = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+  history.unshift({
+    purpose: 'Thiết kế Hoạt động học',
+    c: message, o: content, s: duration, t: people, a: actType || 'AI tự chọn', r: '',
+    time: timeStr, raw: prompt
+  });
+  if (history.length > 5) history = history.slice(0, 5);
+  sessionStorage.setItem('costar_history', JSON.stringify(history));
+  renderHistoryStrip();
+  showToast('Prompt Hoạt động đã tạo — Copy sang Claude!', true);
+}
+
+function resetActivityWizard() {
+  ['wiz-message','wiz-content','wiz-duration','wiz-participants'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('wiz-type').value = '';
+  document.getElementById('output-body').innerHTML = `<div class="output-empty"><div class="output-empty-icon">💬</div><div>Điền brief → Bấm <strong>Tạo Prompt</strong></div></div>`;
+  document.getElementById('tool-suggest').style.display = 'none';
+  showToast('Đã xóa!', true);
+}
+
+
+
+function selectPurpose(el, key) {
+  document.querySelectorAll('.purpose-chip').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  currentPurpose = key;
+
+  const wizard   = document.getElementById('activity-wizard');
+  const form     = document.getElementById('costar-form-wrap');
+  const actionBar= document.getElementById('costar-action-bar');
+  const lbl      = document.getElementById('step2-label');
+
+  if (key === 'activity') {
+    // Show wizard, hide CO-STAR form
+    wizard.style.display = 'block';
+    wizard.classList.add('active');
+    form.style.display = 'none';
+    actionBar.style.display = 'none';
+    lbl.innerHTML = 'Brief Hoạt động học <span class="eyebrow-hint">— điền 4 ô · AI tự thiết kế</span>';
+    setTimeout(() => wizard.scrollIntoView({behavior:'smooth', block:'start'}), 120);
+    return;
+  }
+
+  // Normal CO-STAR flow
+  wizard.style.display = 'none';
+  wizard.classList.remove('active');
+  form.style.display = '';
+  actionBar.style.display = '';
+  lbl.innerHTML = 'Điền 6 thành phần CO-STAR <span class="eyebrow-hint">— chỉnh phần trong [ ]</span>';
+
+  const t = purposeTemplates[key];
+  if(!t) return;
+  currentTools = t.tools || [];
+  ['c','o','s','t','a','r'].forEach(k => {
+    const f = document.getElementById('f-'+k);
+    f.value = t[k] || '';
+    f.style.height = 'auto';
+    f.style.height = (f.scrollHeight + 2) + 'px';
+  });
+  showToast('Prompt mẫu đã tải — chỉnh [ ] rồi bấm Tạo!', true);
+  setTimeout(() => form.scrollIntoView({behavior:'smooth', block:'start'}), 120);
+}
+
+function appendTag(id, text) {
+  const el = document.getElementById(id);
+  el.value = el.value ? el.value + ', ' + text : text;
+}
+function setTag(id, text) { document.getElementById(id).value = text; }
+
+// ━━━━━━ BUILD PROMPT ━━━━━━
+function buildPrompt() {
+  const vals = {};
+  ['c','o','s','t','a','r'].forEach(k => { vals[k] = document.getElementById('f-'+k).value.trim(); });
+  if(!vals.c && !vals.o) { showToast('Điền ít nhất ô C và O trước!', false); return; }
+
+  const labels = {tna_create:'Tạo Form TNA',tna_analyze:'Phân tích TNA',ask:'Xác định mục tiêu ASK',outline:'Tạo Outline Workshop',activity:'Thiết kế Hoạt động học',slide:'Tạo Slide Deck',gamma_nb:'Tạo Slide Gamma/NotebookLM',roleplay:'Script Role-play',material:'Tài liệu học viên',custom:'Tự chọn'};
+  const label = labels[currentPurpose] || 'CO-STAR';
+
+  const body = document.getElementById('output-body');
+  body.innerHTML = `<span class="tag-c">(C)</span> <span class="tag-val">${escHtml(vals.c)}</span>\n\n<span class="tag-o">(O)</span> <span class="tag-val">${escHtml(vals.o)}</span>\n\n<span class="tag-s">(S)</span> <span class="tag-val">${escHtml(vals.s)}</span>\n\n<span class="tag-t">(T)</span> <span class="tag-val">${escHtml(vals.t)}</span>\n\n<span class="tag-a">(A)</span> <span class="tag-val">${escHtml(vals.a)}</span>\n\n<span class="tag-r">(R)</span> <span class="tag-val">${escHtml(vals.r)}</span>`;
+
+  const tools = currentTools.length ? currentTools : ['Claude','ChatGPT'];
+  const ts = document.getElementById('tool-suggest');
+  ts.style.display = 'flex';
+  document.getElementById('tool-badge-1').textContent = tools[0]||'';
+  document.getElementById('tool-badge-2').textContent = tools[1]||'';
+  document.getElementById('tool-badge-2').style.display = tools[1] ? 'inline' : 'none';
+
+  const now = new Date();
+  const timeStr = now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
+  const raw = `(C) ${vals.c}\n\n(O) ${vals.o}\n\n(S) ${vals.s}\n\n(T) ${vals.t}\n\n(A) ${vals.a}\n\n(R) ${vals.r}`;
+  history.unshift({purpose:label, ...vals, time:timeStr, raw});
+  if(history.length > 5) history = history.slice(0,5);
+  sessionStorage.setItem('costar_history', JSON.stringify(history));
+  renderHistoryStrip();
+  showToast('Prompt đã tạo — bấm Copy để dán vào AI!', true);
+}
+
+function copyPrompt() {
+  const body = document.getElementById('output-body');
+  if(body.querySelector('.output-empty')) { showToast('Chưa có Prompt!', false); return; }
+  navigator.clipboard.writeText(body.textContent);
+  showToast('Đã copy Prompt!', true);
+}
+function copyRaw() {
+  if(!history.length) { showToast('Chưa có Prompt!', false); return; }
+  navigator.clipboard.writeText(history[0].raw);
+  showToast('Đã copy Raw Prompt!', true);
+}
+function resetForm() {
+  ['c','o','s','t','a','r'].forEach(k => { const e=document.getElementById('f-'+k); e.value=''; e.style.height='auto'; });
+  document.querySelectorAll('.purpose-chip').forEach(c => c.classList.remove('selected'));
+  currentPurpose=''; currentTools=[];
+  // Reset wizard too
+  const wizard = document.getElementById('activity-wizard');
+  const form   = document.getElementById('costar-form-wrap');
+  const bar    = document.getElementById('costar-action-bar');
+  const lbl    = document.getElementById('step2-label');
+  if (wizard) { wizard.style.display='none'; wizard.classList.remove('active'); }
+  if (form)   { form.style.display = ''; }
+  if (bar)    { bar.style.display = ''; }
+  if (lbl)    { lbl.innerHTML = 'Điền 6 thành phần CO-STAR <span class="eyebrow-hint">— chỉnh phần trong [ ]</span>'; }
+  document.getElementById('output-body').innerHTML = `<div class="output-empty"><div class="output-empty-icon">💬</div><div>Chọn loại Prompt → Chỉnh nội dung<br>→ Bấm <strong>Tạo Prompt</strong></div></div>`;
+  document.getElementById('tool-suggest').style.display='none';
+  showToast('Đã xóa form!', true);
+}
+
+// ━━━━━━ HISTORY ━━━━━━
+function renderHistoryStrip() {
+  const c = document.getElementById('history-items');
+  if(!history.length) { c.innerHTML='<div style="font-size:11px;color:var(--ink-20);padding:4px 0;text-align:center">Chưa có lịch sử.</div>'; return; }
+  c.innerHTML = history.map((h,i) => `<div class="history-item" onclick="loadHistory(${i})">
+    <div class="history-item-dot"></div>
+    <div class="history-item-text">${h.purpose}: ${escHtml(h.c.substring(0,50))}...</div>
+    <div class="history-item-meta"><div class="history-time">${h.time}</div><div class="history-load">Load</div></div>
+  </div>`).join('');
+}
+
+function renderHistoryFull() {
+  const c = document.getElementById('history-full-list');
+  if(!history.length) { c.innerHTML='<div style="text-align:center;padding:80px;color:var(--ink-20)"><div style="font-size:48px;margin-bottom:14px">🕐</div><div style="font-family:Syne,sans-serif;font-weight:700;font-size:14px">Chưa có lịch sử.</div></div>'; return; }
+  c.innerHTML = history.map((h,i) => `<div class="hist-page-item">
+    <div class="hist-page-header">
+      <span class="hist-purpose-tag">${h.purpose}</span>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-20)">${h.time}</span>
+        <button onclick="loadHistory(${i})" style="padding:5px 14px;background:var(--red);color:white;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Instrument Sans',sans-serif">Load vào form</button>
+        <button onclick="copyHistoryItem(${i})" style="padding:5px 14px;background:var(--warm-100);color:var(--ink-70);border:1.5px solid var(--warm-200);border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Instrument Sans',sans-serif">Copy</button>
+      </div>
+    </div>
+    <div class="hist-page-body"><span class="tag-c">(C)</span> <span class="tag-val">${escHtml(h.c)}</span>\n\n<span class="tag-o">(O)</span> <span class="tag-val">${escHtml(h.o)}</span>\n\n<span class="tag-s">(S)</span> <span class="tag-val">${escHtml(h.s)}</span>\n\n<span class="tag-t">(T)</span> <span class="tag-val">${escHtml(h.t)}</span>\n\n<span class="tag-a">(A)</span> <span class="tag-val">${escHtml(h.a)}</span>\n\n<span class="tag-r">(R)</span> <span class="tag-val">${escHtml(h.r)}</span></div>
+  </div>`).join('');
+}
+
+function loadHistory(i) {
+  const h = history[i];
+  ['c','o','s','t','a','r'].forEach(k => { const e=document.getElementById('f-'+k); e.value=h[k]; e.style.height='auto'; e.style.height=(e.scrollHeight+2)+'px'; });
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('panel-builder').classList.add('active');
+  document.querySelector('.nav-btn').classList.add('active');
+  document.getElementById('hero-bar').style.display = '';
+  showToast('Đã load Prompt từ lịch sử!', true);
+}
+function copyHistoryItem(i) { navigator.clipboard.writeText(history[i].raw); showToast('Đã copy!', true); }
+
+// ━━━━━━ MATERIALS ━━━━━━
+function selectMat(el, type, val) {
+  el.closest('.mat-chips-grid').querySelectorAll('.mat-chip').forEach(c=>c.classList.remove('selected'));
+  el.classList.add('selected');
+  matSelections[type] = val;
+}
+
+function buildImagePrompt() {
+  const type = matSelections.image || 'slide16_9';
+  const desc = document.getElementById('image-desc').value.trim() || '[Mô tả nội dung ảnh]';
+  const style = document.getElementById('image-style').value.trim() || 'Tối giản, màu đỏ #C00000 và trắng, chuyên nghiệp';
+  const use = document.getElementById('image-use').value.trim() || 'Slide bài giảng';
+  const typeGuide = {
+    slide16_9:'hình ảnh nền Slide trình chiếu tỷ lệ 16:9 (1920x1080px), bố cục thoáng, có vùng trống phù hợp để đặt chữ lên trên, không lộn xộn',
+    infographic:'infographic thông tin trực quan với icon đơn giản mỗi bước, layout rõ ràng, dễ đọc',
+    visual:'hình ảnh visual storytelling kể câu chuyện, bầu không khí ấm áp và chuyên nghiệp',
+    scene:'hình minh họa tình huống thực tế trong môi trường làm việc hiện đại tại Việt Nam',
+    icon:'diagram hoặc icon set đơn giản, phong cách flat design, dễ nhận biết'
+  }[type]||'hình minh họa chuyên nghiệp';
+  const sizeNote = type==='slide16_9' ? '- Kích thước: 1920x1080px, tỷ lệ 16:9\n- Vùng giữa/trái để trống cho text overlay\n- Không có chữ trong ảnh\n' : '- Không có chữ trong ảnh (để tránh lỗi font tiếng Việt)\n';
+  const prompt = `Tạo ${typeGuide} về: ${desc}\n\nYêu cầu thiết kế:\n- Phong cách: ${style}\n- Mục đích sử dụng: ${use}\n- Bố cục phù hợp với mục đích đã nêu\n${sizeNote}- Chất lượng cao, phù hợp in ấn và trình chiếu\n\n→ Dán prompt này vào ChatGPT (DALL-E 3) hoặc Gemini để tạo ảnh.`;
+  document.getElementById('image-output-body').textContent = prompt;
+  document.getElementById('image-output').classList.add('visible');
+  showToast('Prompt tạo ảnh đã sẵn sàng!', true);
+}
+
+function buildNBPrompt() {
+  const type = matSelections.nb || 'handout';
+  const content = document.getElementById('nb-content').value.trim() || '[Nội dung tài liệu đã upload]';
+  const audience = document.getElementById('nb-audience').value.trim() || '[Đối tượng nhận tài liệu]';
+  const prompts = {
+    handout:`Từ tài liệu về "${content}", hãy tạo Handout 1 trang cho học viên:\n- Mục tiêu buổi học: tóm tắt 3–4 điểm\n- Kiến thức trọng tâm: 5 điểm chính cần nhớ, mỗi điểm 1–2 câu\n- Công cụ và phương pháp chính được giới thiệu\n- 3 câu hỏi phản chiếu học viên tự hỏi bản thân sau buổi học\n\nNgôn ngữ: dễ hiểu, không học thuật, phù hợp với ${audience}.`,
+    flashcard:`Từ tài liệu về "${content}", hãy tạo 10 Flashcard ôn tập cho ${audience}:\n- Mỗi card: 1 câu hỏi ngắn (mặt trước) + 1 câu trả lời súc tích dễ nhớ (mặt sau)\n- Tập trung vào kiến thức ứng dụng thực tế, không hỏi thuộc lý thuyết\n- Format: đánh số từ 1–10, mỗi card trên 1 hàng riêng\n- Độ khó tăng dần từ cơ bản đến nâng cao`,
+    mindmap:`Từ tài liệu về "${content}", hãy tạo cấu trúc Mindmap:\n- Node trung tâm: [tên chủ đề chính]\n- 4 nhánh chính tương ứng 4 phần lớn của tài liệu\n- Mỗi nhánh chính có 3–4 node con là ý quan trọng nhất\n- Trả về dạng text có thể copy vào MindMeister, Miro hoặc XMind\n- Dùng ký hiệu: → cho nhánh chính, • cho node con`,
+    tna:`Từ kết quả TNA đã upload về "${content}", hãy phân tích:\n1. ĐÂU là Learning Gap lớn nhất của nhóm này? (dựa trên số liệu thực tế)\n2. Công cụ AI nào nhóm đang dùng nhiều nhất và dùng để làm gì?\n3. Rào cản lớn nhất khi ứng dụng AI là gì?\n4. Kỳ vọng phổ biến nhất sau Workshop là gì?\n5. Gợi ý: Tôi nên thiết kế chương trình tập trung vào điều gì nhất?`
+  };
+  document.getElementById('nb-output-body').textContent = prompts[type]||prompts.handout;
+  document.getElementById('nb-output').classList.add('visible');
+  showToast('Câu hỏi cho NotebookLM đã sẵn sàng!', true);
+}
+
+function copyMat(id) { navigator.clipboard.writeText(document.getElementById(id).textContent); showToast('Đã copy!', true); }
+
+// ━━━━━━ UTILS ━━━━━━
+function escHtml(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function showToast(msg, success=true) {
+  const t=document.getElementById('toast');
+  const icon=document.getElementById('toast-icon');
+  const m=document.getElementById('toast-msg');
+  t.className='toast '+(success?'success':'error');
+  icon.textContent = success?'✓':'!';
+  m.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2600);
+}
+
+// Auto-resize textareas
+document.querySelectorAll('.field-input').forEach(ta => {
+  ta.addEventListener('input', function(){ this.style.height='auto'; this.style.height=(this.scrollHeight+2)+'px'; });
+});
+
+// Init
+renderHistoryStrip();
+</script>
+</body>
+</html>
